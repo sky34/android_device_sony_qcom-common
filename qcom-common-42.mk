@@ -21,4 +21,4 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.opengles.version=131072
 
 # Include non-opensource parts
-$(call inherit-product, vendor/sony/lbqcom-common/qcom-common-vendor-4.2.mk)
+$(call inherit-product, vendor/lbsony/qcom-common/qcom-common-vendor-4.2.mk)
