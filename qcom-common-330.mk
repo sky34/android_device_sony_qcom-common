@@ -14,11 +14,11 @@
 
 USE_ADRENO_330 := true
 
-$(call inherit-product, device/sony/qcom-common/qcom-common.mk)
+$(call inherit-product, device/sony/lbqcom-common/qcom-common.mk)
 
 # OpenGL ES 3.0
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.opengles.version=196608
 
 # Include non-opensource parts
-$(call inherit-product, vendor/sony/qcom-common/qcom-common-vendor-330.mk)
+$(call inherit-product, vendor/sony/lbqcom-common/qcom-common-vendor-330.mk)

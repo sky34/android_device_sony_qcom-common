@@ -39,7 +39,7 @@ TARGET_PROVIDES_CAMERA_HAL := true
 COMMON_GLOBAL_CFLAGS += -DDISABLE_HW_ID_MATCH_CHECK
 
 ifeq ($(BOARD_EGL_CFG),)
-BOARD_EGL_CFG := device/sony/qcom-common/rootdir/system/lib/egl/egl.cfg
+BOARD_EGL_CFG := device/sony/lbqcom-common/rootdir/system/lib/egl/egl.cfg
 endif
 
 # RIL
