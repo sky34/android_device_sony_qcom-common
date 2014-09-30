@@ -3,6 +3,6 @@
 export DEVICE=${PWD##*/}
 export BOARDCONFIGVENDOR=false
 
-../common/extract-files.sh $@
+../lbcommon/extract-files.sh $@
 
-../common/setup-makefiles.sh
+../lbcommon/setup-makefiles.sh
