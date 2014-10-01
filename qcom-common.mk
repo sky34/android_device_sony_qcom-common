@@ -61,7 +61,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 # QC Perf
 PRODUCT_PROPERTY_OVERRIDES += \
-    ro.vendor.extension_library=/lib/libqc-opt.so
+    ro.vendor.extension_library=/system/lib/libqc-opt.so
 
 # Qualcomm random numbers generated
 PRODUCT_PACKAGES += qrngd
@@ -93,8 +93,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 ifneq ($(USE_ADRENO_42),true)
 ifneq ($(USE_ADRENO_330),true)
-PRODUCT_PROPERTY_OVERRIDES += \
-    debug.composition.type=dyn
+#PRODUCT_PROPERTY_OVERRIDES += \
+#    debug.composition.type=dyn
 
 # OpenGL ES 3.0
 PRODUCT_PROPERTY_OVERRIDES += \
