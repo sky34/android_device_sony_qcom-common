@@ -1,7 +1,5 @@
 /* //device/libs/telephony/ril.cpp
 **
-** Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
-** Not a Contribution
 ** Copyright 2006, The Android Open Source Project
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -145,8 +143,7 @@ typedef struct UserCallbackInfo {
     struct UserCallbackInfo *p_next;
 } UserCallbackInfo;
 
-extern "C"
-char rild[MAX_SOCKET_NAME_LENGTH] = SOCKET_NAME_RIL;
+
 /*******************************************************************/
 
 RIL_RadioFunctions s_callbacks = {0, NULL, NULL, NULL, NULL, NULL};
@@ -218,7 +215,6 @@ static void dispatchCdmaSmsAck(Parcel &p, RequestInfo *pRI);
 static void dispatchGsmBrSmsCnf(Parcel &p, RequestInfo *pRI);
 static void dispatchCdmaBrSmsCnf(Parcel &p, RequestInfo *pRI);
 static void dispatchRilCdmaSmsWriteArgs(Parcel &p, RequestInfo *pRI);
-static void dispatchUiccSubscripton(Parcel &p, RequestInfo *pRI);
 static void dispatchNetworkManual (Parcel& p, RequestInfo *pRI);
 static int responseInts(Parcel &p, void *response, size_t responselen);
 static int responseStrings(Parcel &p, void *response, size_t responselen);
@@ -297,15 +293,6 @@ int cdmaSubscriptionSource = -1;
    check to see if SIM/RUIM status changed and notify telephony
  */
 int simRuimStatus = -1;
-
-static char * RIL_getRilSocketName() {
-    return rild;
-}
-
-extern "C"
-void RIL_setRilSocketName(char * s) {
-    strncpy(rild, s, MAX_SOCKET_NAME_LENGTH);
-}
 
 static char *
 strdupReadString(Parcel &p) {
@@ -670,6 +657,10 @@ dispatchDial (Parcel &p, RequestInfo *pRI) {
     status_t status;
 
     memset (&dial, 0, sizeof(dial));
+    /* This is needed in order to avoid a crash in qcom's ril library
+       It doesn't make much sense, as dial.uusInfo will be set to NULL
+       My best guess is that they are simply reading beyond *dial.... */
+    memset (&uusInfo, 0, sizeof(RIL_UUS_Info));
 
     dial.address = strdupReadString(p);
 
@@ -1567,56 +1558,6 @@ static void dispatchSetInitialAttachApn(Parcel &p, RequestInfo *pRI)
 #endif
 
     return;
-invalid:
-    invalidCommandBlock(pRI);
-    return;
-}
-
-static void dispatchUiccSubscripton(Parcel &p, RequestInfo *pRI) {
-    RIL_SelectUiccSub uicc_sub;
-    status_t status;
-    int32_t  t;
-    memset(&uicc_sub, 0, sizeof(uicc_sub));
-
-    status = p.readInt32(&t);
-    if (status != NO_ERROR) {
-        goto invalid;
-    }
-    uicc_sub.slot = (int) t;
-
-    status = p.readInt32(&t);
-    if (status != NO_ERROR) {
-        goto invalid;
-    }
-    uicc_sub.app_index = (int) t;
-
-    status = p.readInt32(&t);
-    if (status != NO_ERROR) {
-        goto invalid;
-    }
-    uicc_sub.sub_type = (RIL_SubscriptionType) t;
-
-    status = p.readInt32(&t);
-    if (status != NO_ERROR) {
-        goto invalid;
-    }
-    uicc_sub.act_status = (RIL_UiccSubActStatus) t;
-
-    startRequest;
-    appendPrintBuf("slot=%d, app_index=%d, act_status = %d", uicc_sub.slot, uicc_sub.app_index,
-            uicc_sub.act_status);
-    RLOGD("dispatchUiccSubscription, slot=%d, app_index=%d, act_status = %d", uicc_sub.slot,
-            uicc_sub.app_index, uicc_sub.act_status);
-    closeRequest;
-    printRequest(pRI->token, pRI->pCI->requestNumber);
-
-    s_callbacks.onRequest(pRI->pCI->requestNumber, &uicc_sub, sizeof(uicc_sub), pRI);
-
-#ifdef MEMSET_FREED
-    memset(&uicc_sub, 0, sizeof(uicc_sub));
-#endif
-    return;
-
 invalid:
     invalidCommandBlock(pRI);
     return;
@@ -2560,7 +2501,7 @@ static int responseSimRefresh(Parcel &p, void *response, size_t responselen) {
     }
 
     startResponse;
-    if (s_callbacks.version >= 7) {
+    if (s_callbacks.version == 7) {
         RIL_SimRefreshResponse_v7 *p_cur = ((RIL_SimRefreshResponse_v7 *) response);
         p.writeInt32(p_cur->result);
         p.writeInt32(p_cur->ef_id);
@@ -3413,26 +3354,27 @@ eventLoop(void *param) {
 
 extern "C" void
 RIL_startEventLoop(void) {
+    int ret;
+    pthread_attr_t attr;
+
     /* spin up eventLoop thread and wait for it to get started */
     s_started = 0;
     pthread_mutex_lock(&s_startupMutex);
 
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
+    pthread_attr_init (&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-
-    int result = pthread_create(&s_tid_dispatch, &attr, eventLoop, NULL);
-    if (result != 0) {
-        RLOGE("Failed to create dispatch thread: %s", strerror(result));
-        goto done;
-    }
+    ret = pthread_create(&s_tid_dispatch, &attr, eventLoop, NULL);
 
     while (s_started == 0) {
         pthread_cond_wait(&s_startupCond, &s_startupMutex);
     }
 
-done:
     pthread_mutex_unlock(&s_startupMutex);
+
+    if (ret < 0) {
+        RLOGE("Failed to create dispatch thread errno:%d", errno);
+        return;
+    }
 }
 
 // Used for testing purpose only.
@@ -3502,9 +3444,9 @@ RIL_register (const RIL_RadioFunctions *callbacks) {
     s_fdListen = ret;
 
 #else
-    s_fdListen = android_get_control_socket(RIL_getRilSocketName());
+    s_fdListen = android_get_control_socket(SOCKET_NAME_RIL);
     if (s_fdListen < 0) {
-        RLOGE("Failed to get socket %s",RIL_getRilSocketName());
+        RLOGE("Failed to get socket '" SOCKET_NAME_RIL "'");
         exit(-1);
     }
 
@@ -3527,19 +3469,9 @@ RIL_register (const RIL_RadioFunctions *callbacks) {
 #if 1
     // start debug interface socket
 
-    char *inst = NULL;
-    if (strlen(RIL_getRilSocketName()) >= strlen(SOCKET_NAME_RIL)) {
-        inst = RIL_getRilSocketName() + strlen(SOCKET_NAME_RIL);
-    }
-
-    char rildebug[MAX_DEBUG_SOCKET_NAME_LENGTH] = SOCKET_NAME_RIL_DEBUG;
-    if (inst != NULL) {
-        strncat(rildebug, inst, MAX_DEBUG_SOCKET_NAME_LENGTH);
-    }
-
-    s_fdDebug = android_get_control_socket(rildebug);
+    s_fdDebug = android_get_control_socket(SOCKET_NAME_RIL_DEBUG);
     if (s_fdDebug < 0) {
-        RLOGE("Failed to get socket : %s errno:%d", rildebug, errno);
+        RLOGE("Failed to get socket '" SOCKET_NAME_RIL_DEBUG "' errno:%d", errno);
         exit(-1);
     }
 
@@ -3789,7 +3721,7 @@ processRadioState(RIL_RadioState newRadioState) {
 }
 
 extern "C"
-void RIL_onUnsolicitedResponse(int unsolResponse, const void *data,
+void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
                                 size_t datalen)
 {
     int unsolResponseIndex;
@@ -3844,7 +3776,7 @@ void RIL_onUnsolicitedResponse(int unsolResponse, const void *data,
     p.writeInt32 (unsolResponse);
 
     ret = s_unsolResponses[unsolResponseIndex]
-                .responseFunction(p, const_cast<void*>(data), datalen);
+                .responseFunction(p, data, datalen);
     if (ret != 0) {
         // Problem with the response. Don't continue;
         goto error_exit;
@@ -4131,8 +4063,6 @@ requestToString(int request) {
         case RIL_REQUEST_IMS_REGISTRATION_STATE: return "IMS_REGISTRATION_STATE";
         case RIL_REQUEST_IMS_SEND_SMS: return "IMS_SEND_SMS";
         case RIL_REQUEST_GET_DATA_CALL_PROFILE: return "GET_DATA_CALL_PROFILE";
-        case RIL_REQUEST_SET_UICC_SUBSCRIPTION: return "SET_UICC_SUBSCRIPTION";
-        case RIL_REQUEST_SET_DATA_SUBSCRIPTION: return "SET_DATA_SUBSCRIPTION";
         case RIL_UNSOL_RESPONSE_RADIO_STATE_CHANGED: return "UNSOL_RESPONSE_RADIO_STATE_CHANGED";
         case RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED: return "UNSOL_RESPONSE_CALL_STATE_CHANGED";
         case RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED: return "UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED";
@@ -4173,7 +4103,6 @@ requestToString(int request) {
         case RIL_UNSOL_CELL_INFO_LIST: return "UNSOL_CELL_INFO_LIST";
 #endif
         case RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED: return "RESPONSE_IMS_NETWORK_STATE_CHANGED";
-        case RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED: return "UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED";
         default: return "<unknown request>";
     }
 }
