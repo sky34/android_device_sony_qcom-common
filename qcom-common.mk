@@ -19,6 +19,15 @@ DEVICE_PACKAGE_OVERLAYS += $(COMMON_PATH)/overlay
 PRODUCT_COPY_FILES += \
     $(COMMON_PATH)/rootdir/system/etc/media_codecs.xml:system/etc/media_codecs.xml
 
+# Wifi
+PRODUCT_PACKAGES += \
+    hostapd \
+    hostapd_default.conf \
+    dhcpcd.conf \
+    libwpa_client \
+    wpa_supplicant \
+    wpa_supplicant.conf
+
 # QCOM Display
 PRODUCT_PACKAGES += \
     libgenlock \
