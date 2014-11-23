@@ -62,7 +62,7 @@ PRODUCT_PACKAGES += \
 
 # Lights
 PRODUCT_PACKAGES += \
-    lights.qcom
+    lights.msm8960
 
 # QCOM
 PRODUCT_PROPERTY_OVERRIDES += \
