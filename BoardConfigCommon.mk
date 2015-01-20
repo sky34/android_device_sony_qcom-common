@@ -43,7 +43,8 @@ endif
 
 # RIL
 BOARD_PROVIDES_LIBRIL := true
-BOARD_USES_QCOM_RIL_RESPONSE_5_ELEMENTS := true
+BOARD_RIL_CLASS := ../../../device/sony/lbqcom-common/ril/
+TARGET_SPECIFIC_HEADER_PATH += device/sony/lbqcom-common/include
 
 # Bluetoth
 BOARD_HAVE_BLUETOOTH := true

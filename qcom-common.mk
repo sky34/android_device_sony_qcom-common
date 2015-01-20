@@ -16,8 +16,19 @@ COMMON_PATH := device/sony/lbqcom-common
 
 DEVICE_PACKAGE_OVERLAYS += $(COMMON_PATH)/overlay
 
+# Media profile
+PRODUCT_COPY_FILES += \
+    frameworks/av/media/libstagefright/data/media_codecs_ffmpeg.xml:system/etc/media_codecs_ffmpeg.xml \
+    frameworks/av/media/libstagefright/data/media_codecs_google_audio.xml:system/etc/media_codecs_google_audio.xml \
+    frameworks/av/media/libstagefright/data/media_codecs_google_telephony.xml:system/etc/media_codecs_google_telephony.xml \
+    frameworks/av/media/libstagefright/data/media_codecs_google_video.xml:system/etc/media_codecs_google_video.xml
+
 PRODUCT_COPY_FILES += \
     $(COMMON_PATH)/rootdir/system/etc/media_codecs.xml:system/etc/media_codecs.xml
+
+# RIL
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.telephony.ril_class=SonyRIL
 
 # Wifi
 PRODUCT_PACKAGES += \
@@ -64,6 +75,10 @@ PRODUCT_BOOT_JARS += \
 PRODUCT_PACKAGES += \
     power.qcom
 
+# Lights 		
+PRODUCT_PACKAGES += \
+    lights.qcom
+
 # QCOM
 PRODUCT_PROPERTY_OVERRIDES += \
     com.qc.hardware=true
@@ -86,9 +101,9 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 # Hostapd
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/rootdir/system/etc/hostapd/hostapd_default.conf:system/etc/hostapd/hostapd_default.conf \
-    $(LOCAL_PATH)/rootdir/system/etc/hostapd/hostapd.accept:system/etc/hostapd/hostapd.accept \
-    $(LOCAL_PATH)/rootdir/system/etc/hostapd/hostapd.deny:system/etc/hostapd/hostapd.deny
+    $(COMMON_PATH)/rootdir/system/etc/hostapd/hostapd_default.conf:system/etc/hostapd/hostapd_default.conf \
+    $(COMMON_PATH)/rootdir/system/etc/hostapd/hostapd.accept:system/etc/hostapd/hostapd.accept \
+    $(COMMON_PATH)/rootdir/system/etc/hostapd/hostapd.deny:system/etc/hostapd/hostapd.deny
 
 # SoftAP
 PRODUCT_PACKAGES += \
