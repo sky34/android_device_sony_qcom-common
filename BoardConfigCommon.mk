@@ -48,7 +48,3 @@ TARGET_SPECIFIC_HEADER_PATH += device/sony/lbqcom-common/include
 
 # Bluetoth
 BOARD_HAVE_BLUETOOTH := true
-
-# Webkit
-ENABLE_WEBGL := true
-TARGET_FORCE_CPU_UPLOAD := true
