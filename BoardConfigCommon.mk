@@ -48,3 +48,6 @@ TARGET_SPECIFIC_HEADER_PATH += device/sony/lbqcom-common/include
 
 # Bluetoth
 BOARD_HAVE_BLUETOOTH := true
+
+# Bionic
+MALLOC_IMPL := dlmalloc
